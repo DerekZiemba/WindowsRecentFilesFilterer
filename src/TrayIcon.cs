@@ -10,6 +10,7 @@ using System.Diagnostics;
 
 
 namespace WindowsRecentFilesFilterer {
+    #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
    internal class TrayIcon : IDisposable {
       private AppContext _appctx;
@@ -17,10 +18,10 @@ namespace WindowsRecentFilesFilterer {
       private IContainer _components;
 
       private MenuItem[] _menuItems;
-      private MenuItem _menuItem_LastRunTime;
-      private MenuItem _menuItem_RunFilters;
-      private MenuItem _menuItem_ConfigFile;
-      private MenuItem _menuItem_Exit;
+      private MenuItem _miLastRunTime;
+      private MenuItem _miRunFilters;
+      private MenuItem _miConfigFile;
+      private MenuItem _miExit;
 
       internal event Action LoadedConfig;
 
@@ -34,37 +35,27 @@ namespace WindowsRecentFilesFilterer {
             Visible = true
          };
 
-         _menuItem_LastRunTime = new MenuItem("Last Run: ") { Enabled = false };
-         _appctx.LocationWatcherMan.FilterRunComplete += () => {
-            _menuItem_LastRunTime.Text = "Last Run: " + DateTime.Now.ToLongTimeString();
+         _miLastRunTime = new MenuItem("Last Run: ") { Enabled = false };
+         _appctx.LocationWatcherMan.FilterRunComplete += (sender, args) => {
+            _miLastRunTime.Text = "Last Run: " + DateTime.Now.ToLongTimeString() + ". Runtime: " + args.RuntimeMilliseconds + "ms";
          };
 
-         _menuItem_RunFilters = new MenuItem("Run Filters");
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-         _menuItem_RunFilters.Click +=  (sender, e) => { _appctx.LocationWatcherMan.RunFiltersAsync(); };
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+         _miRunFilters = new MenuItem("Run Filters");
+         _miRunFilters.Click +=  (sender, e) => { _appctx.LocationWatcherMan.RunFiltersAsync(); };
 
-         _menuItem_ConfigFile = new MenuItem(Configuration.DefaultConfigFileName);
+         _miConfigFile = new MenuItem(Configuration.DefaultConfigFileName);
 
-         _menuItem_Exit = new MenuItem("Exit");
-         _menuItem_Exit.Click += (sender, e) => { _notifyIcon.Visible = false; Application.Exit(); };
+         _miExit = new MenuItem("Exit");
+         _miExit.Click += (sender, e) => { _notifyIcon.Visible = false; Application.Exit(); };
 
-         _menuItems = new[] {   _menuItem_LastRunTime,
-                                _menuItem_RunFilters,
-                              new MenuItem("-"),
-                              _menuItem_ConfigFile,
-                              new MenuItem("-"),
-                              _menuItem_Exit
-         };
+         _menuItems = new[] { _miRunFilters, _miLastRunTime, new MenuItem("-"), _miConfigFile, new MenuItem("-"), _miExit };
 
          RebuildMenuItems();
 
          context.ConfigChangeAlert += RebuildMenuItems;
 
       }
-      ~TrayIcon() {
-         Dispose(false);
-      }
+
 
       public void RebuildMenuItems() {
          _notifyIcon.ContextMenu.MenuItems.Clear();
@@ -73,13 +64,13 @@ namespace WindowsRecentFilesFilterer {
             _notifyIcon.ContextMenu.MenuItems.Add(_menuItems[i]);
          }
 
-         _menuItem_ConfigFile.Text = (_appctx.Cfg.GoodConfigExists ? "Reload " : "Create ") + Configuration.DefaultConfigFileName;
-         _menuItem_ConfigFile.Click -= HandleCreateConfigFileEvent;
-         _menuItem_ConfigFile.Click -= HandleLoadConfigFileEvent;
+         _miConfigFile.Text = (_appctx.Cfg.GoodConfigExists ? "Reload " : "Create ") + Configuration.DefaultConfigFileName;
+         _miConfigFile.Click -= HandleCreateConfigFileEvent;
+         _miConfigFile.Click -= HandleLoadConfigFileEvent;
          if(_appctx.Cfg.GoodConfigExists) {
-            _menuItem_ConfigFile.Click += HandleLoadConfigFileEvent;
+            _miConfigFile.Click += HandleLoadConfigFileEvent;
          } else {
-            _menuItem_ConfigFile.Click += HandleCreateConfigFileEvent;
+            _miConfigFile.Click += HandleCreateConfigFileEvent;
          }
       }
 
@@ -87,7 +78,7 @@ namespace WindowsRecentFilesFilterer {
       private void HandleLoadConfigFileEvent(Object sender, EventArgs ev) => SaveOrLoadConfigFile(true);
 
       private async void SaveOrLoadConfigFile(bool bLoad) {
-         MenuItem micf = _menuItem_ConfigFile;
+         MenuItem micf = _miConfigFile;
          micf.Click -= HandleCreateConfigFileEvent; micf.Click -= HandleLoadConfigFileEvent;
          try {
             if(bLoad) {
@@ -110,8 +101,12 @@ namespace WindowsRecentFilesFilterer {
       }
 
 
-      #region Disposable Methods
-      protected bool _disposed;
+
+
+     #region IDisposable
+      ~TrayIcon() {
+         Dispose(false);
+      }
 
       // Implement IDisposable.
       // Do not make this method virtual.
@@ -122,30 +117,23 @@ namespace WindowsRecentFilesFilterer {
          // Therefore, you should call GC.SupressFinalize to take this object off the finalization queue and prevent finalization code for this object from executing a second time.
          GC.SuppressFinalize(this);
       }
-
-
+    
       // Dispose(bool disposing) executes in two distinct scenarios.
       // If disposing equals true, the method has been called directly or indirectly by a user's code. Managed and unmanaged resources can be disposed.
       // If disposing equals false, the method has been called by the runtime from inside the finalizer and you should not reference other objects. Only unmanaged resources can be disposed.
-      protected virtual void Dispose(bool disposing) {
-         // Check to see if Dispose has already been called.
-         if(!_disposed) {
-            // If disposing equals true, dispose all managed and unmanaged resources.
-            var iconhandle = _notifyIcon.Icon.Handle;
-            if(disposing) {
-               // Dispose managed resources.  
-               _components.Dispose();
-               _notifyIcon.Dispose();
-            }
-
-            // Call the appropriate methods to clean up unmanaged resources here.
-            // If disposing is false, only the following code is executed.
-            Interop.DestroyIcon(iconhandle);
-
-            // Note disposing has been done.
-            _disposed = true;
+      protected virtual void Dispose(bool disposing) { // If disposing equals true, dispose all managed and unmanaged resources.
+         if(_disposed) { return; } //Guard against repeat disposals
+         IntPtr iconhandle = _notifyIcon.Icon.Handle;
+         if(disposing) { // Dispose managed resources.  
+            _components.Dispose();
+            _notifyIcon.Dispose();
+            foreach(Delegate ev in LoadedConfig.GetInvocationList()) { LoadedConfig -= (Action)ev; }
          }
+         // Call the appropriate methods to clean up unmanaged resources here. If disposing is false, only the following code is executed. 
+         Interop.DestroyIcon(iconhandle);
+         _disposed = true;
       }
+      protected bool _disposed;
 
       #endregion
 

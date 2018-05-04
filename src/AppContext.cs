@@ -8,7 +8,7 @@ using System.Windows.Threading;
 using ZMBA;
 
 namespace WindowsRecentFilesFilterer {
-   public class AppContext : System.Windows.Forms.ApplicationContext {
+   public class AppContext : System.Windows.Forms.ApplicationContext, IDisposable  {
       private Task _taskLoadCfg;
       private Configuration _cfg;
       private DispatcherTimer _timer;
@@ -33,7 +33,6 @@ namespace WindowsRecentFilesFilterer {
          TrayIcon = new TrayIcon(this);
          TrayIcon.LoadedConfig += () => this.ConfigChangeAlert();
 
-
          _timer = new DispatcherTimer();
          _timer.Tick += (object sender, EventArgs e) => this.TimerTick();
          _timer.Interval = TimeSpan.FromSeconds(_cfg.FilterInterval);
@@ -45,12 +44,31 @@ namespace WindowsRecentFilesFilterer {
       }
 
 
+      #region IDisposable
 
-      // Called from the Dispose method of the base class
-      protected override void Dispose(bool disposing) {
-         _timer.Stop();
-         TrayIcon.Dispose();
+
+      ~AppContext() {
+         Dispose(false);
+      } 
+    
+      // Dispose(bool disposing) executes in two distinct scenarios.
+      // If disposing equals true, the method has been called directly or indirectly by a user's code. Managed and unmanaged resources can be disposed.
+      // If disposing equals false, the method has been called by the runtime from inside the finalizer and you should not reference other objects. Only unmanaged resources can be disposed.
+      protected override void Dispose(bool disposing) { // If disposing equals true, dispose all managed and unmanaged resources.
+         if(_disposed) { return; } //Guard against repeat disposals
+         if(disposing) { // Dispose managed resources.  
+            _timer.Stop();
+            TrayIcon.Dispose();   
+            foreach(Delegate ev in ConfigChangeAlert.GetInvocationList()) { ConfigChangeAlert -= (Action)ev; }
+            foreach(Delegate ev in TimerTick.GetInvocationList()) { TimerTick -= (Action)ev; }
+         }
          base.Dispose(disposing);
+         // Call the appropriate methods to clean up unmanaged resources here. If disposing is false, only the following code is executed.      
+         _disposed = true;
       }
+      protected bool _disposed;
+
+      #endregion
+
    }
 }

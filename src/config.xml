@@ -3,7 +3,7 @@
 <configuration>
 
    <!-- The locations will be filtered every interval in case FileSystemWatcher misses a file. -->
-   <filterinterval seconds="300" />
+   <filterinterval seconds="600" />
 
    <locations>
       <!-- Watch specifically for new .lnk shortcut files being created. -->
@@ -18,7 +18,11 @@
          <filter totargetpath="true" include="X:\*" exclude="" />
          <filter totargetpath="true" include="*.torrent" exclude="" />
       </location>
-
+<!--todo: C:\Users\Derek\AppData\Roaming\Microsoft\Windows\Recent\AutomaticDestinations-->
+      <!--todo: C:\Users\Derek\AppData\Roaming\Microsoft\Windows\Recent\CustomDestinations-->
+      <!--https://tzworks.net/prototype_page.php?proto_id=20-->
+      <!--https://github.com/EricZimmerman/Lnk/tree/master/Lnk-->
+      <!--https://github.com/CodeCavePro/OpenMCDF-->
    </locations>
 
    <filters>

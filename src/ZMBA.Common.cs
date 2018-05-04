@@ -107,6 +107,57 @@ namespace ZMBA {
       #endregion
 
 
+      #region ************************************** Events ******************************************************
+
+
+      //private static Func<MulticastDelegate, object> _multicastDelegate_invocationList_Get;
+      //private static Action<MulticastDelegate, object> _multicastDelegate_invocationList_Set;
+
+      //private static Func<MulticastDelegate, IntPtr> _multicastDelegate_invocationCount_Get;
+      //private static Action<MulticastDelegate, IntPtr> _multicastDelegate_invocationCount_Set;
+
+      //public static void RemoveEvents(this MulticastDelegate md) {
+      //   if(_multicastDelegate_invocationList_Get == null) { _multicastDelegate_invocationList_Get = RuntimeCompiler.CompileFieldReader<MulticastDelegate, object>("_invocationList"); }
+      //   if(_multicastDelegate_invocationList_Set == null) { _multicastDelegate_invocationList_Set = RuntimeCompiler.CompileFieldWriter<MulticastDelegate, object>("_invocationList"); }
+      //   if(_multicastDelegate_invocationCount_Get == null) { _multicastDelegate_invocationCount_Get = RuntimeCompiler.CompileFieldWriter<MulticastDelegate, IntPtr>("_invocationCount"); }
+      //   if(_multicastDelegate_invocationCount_Set == null) { _multicastDelegate_invocationCount_Set = RuntimeCompiler.CompileFieldWriter<MulticastDelegate, IntPtr>("_invocationCount"); }
+
+      //   object[] invocationList = _multicastDelegate_invocationList_Get(md) as object[];
+      //   //if(invocationList == null) {
+      //   //   delegateArray = new Delegate[1] { (Delegate)this };
+      //   //} else {
+      //   //   int invocationCount = (int) this._invocationCount;
+      //   //   delegateArray = new Delegate[invocationCount];
+      //   //   for(int index = 0; index < invocationCount; ++index)
+      //   //      delegateArray[index] = (Delegate)invocationList[index];
+      //   //}
+
+      //}
+
+
+      //public static void RemoveEvents<T>(this T obj, params string[] eventnames) {
+      //   var multicastType = typeof(MulticastDelegate);
+      //   var type = obj.GetType();
+      //   var fields = type.GetFields(BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+      //   for(var i=0; i < fields.Length; i++) {
+      //      var field = fields[i];
+      //      if (field.FieldType == multicastType || field.FieldType.IsSubclassOf(multicastType)) {
+      //         if(eventnames == null) {
+
+      //         } else {
+      //            for(var k = 0; k < eventnames.Length; i++) {
+
+      //            }
+      //         }
+      //      }
+      //   }
+      //}
+
+
+
+      #endregion
+
+
    }
 
 
@@ -142,6 +193,7 @@ namespace ZMBA {
       [MethodImpl(AggressiveInlining)] public static bool EqAlphaNum(this string str, string other) => 0 == InvCmpInfo.Compare(str, other, VbCmp | CmpOp.IgnoreSymbols);
 
       [MethodImpl(AggressiveInlining)] public static bool EqAlphaNumIgCase(this string str, string other) => 0 == InvCmpInfo.Compare(str, other, VbCmp | CmpOp.IgnoreSymbols | CmpOp.IgnoreCase);
+
 
       public static bool Like(this string input, string pattern) {
          return Microsoft.VisualBasic.CompilerServices.LikeOperator.LikeString(input, pattern, Microsoft.VisualBasic.CompareMethod.Text);
