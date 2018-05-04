@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.Drawing;
@@ -7,22 +8,22 @@ using System.ComponentModel;
 using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
+using ZMBA;
 
 
 namespace WindowsRecentFilesFilterer {
-    #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
    internal class TrayIcon : IDisposable {
       private AppContext _appctx;
       private NotifyIcon _notifyIcon;
       private IContainer _components;
 
-      private MenuItem[] _menuItems;
-      private MenuItem _miLastRunTime;
-      private MenuItem _miRunFilters;
-      private MenuItem _miConfigFile;
-      private MenuItem _miRunAtStartup;
-      private MenuItem _miExit;
+      private ToolStripMenuItem _miLastRunTime;
+      private ToolStripMenuItem _miRunFilters;
+      private ToolStripMenuItem _miConfigFile;
+      private ToolStripMenuItem _miRunAtStartup;
+      private ToolStripMenuItem _miExit;
 
       internal event Action LoadedConfig;
 
@@ -30,44 +31,44 @@ namespace WindowsRecentFilesFilterer {
          _appctx = context;
          _components = new System.ComponentModel.Container();
          _notifyIcon = new NotifyIcon(this._components) {
-            ContextMenu = new ContextMenu(),
+            ContextMenuStrip = new ContextMenuStrip(),
             Icon = Properties.Resources.AppIcon,
             Text = Program.ProcessName,
             Visible = true
          };
 
-         _miLastRunTime = new MenuItem("Last Run: ") { Enabled = false };
+         _miLastRunTime = new ToolStripMenuItem("Last Run: ") { Enabled = false };
          _appctx.LocationWatcherMan.FilterRunComplete += (sender, args) => {
             _miLastRunTime.Text = "Last Run: " + DateTime.Now.ToLongTimeString() + ". Runtime: " + args.RuntimeMilliseconds + "ms";
          };
 
-         _miRunFilters = new MenuItem("Run Filters");
-         _miRunFilters.Click +=  (sender, e) => { _appctx.LocationWatcherMan.RunFiltersAsync(); };
+         _miRunFilters = new ToolStripMenuItem("Run Filters");
+         _miRunFilters.Click += (sender, e) => { _appctx.LocationWatcherMan.RunFiltersAsync(); };
 
-         _miConfigFile = new MenuItem(Configuration.DefaultConfigFileName);
+         _miConfigFile = new ToolStripMenuItem(Configuration.DefaultConfigFileName);
 
-         _miRunAtStartup = new MenuItem("Run at Startup");
+         _miRunAtStartup = new ToolStripMenuItem("Run at Startup");
+         _miRunAtStartup.Click += (sender, e) => { ConfigureStartupLocation(!_miRunAtStartup.Checked); };
 
-
-         _miExit = new MenuItem("Exit");
+         _miExit = new ToolStripMenuItem("Exit");
          _miExit.Click += (sender, e) => { _notifyIcon.Visible = false; Application.Exit(); };
+;
+         _notifyIcon.ContextMenuStrip.Items.AddRange(new ToolStripItem[] { _miRunFilters, _miLastRunTime, new ToolStripSeparator(), _miConfigFile, _miRunAtStartup, new ToolStripSeparator(), _miExit });
 
-         _menuItems = new[] { _miRunFilters, _miLastRunTime, new MenuItem("-"), _miConfigFile, new MenuItem("-"), _miExit };
+         _notifyIcon.ContextMenuStrip.Opening += (object sender, System.ComponentModel.CancelEventArgs e) => {
+            e.Cancel = false;
+         };
 
+         ConfigureStartupLocation();
          RebuildMenuItems();
 
          context.ConfigChangeAlert += RebuildMenuItems;
+
 
       }
 
 
       public void RebuildMenuItems() {
-         _notifyIcon.ContextMenu.MenuItems.Clear();
-
-         for(int i = 0, len = _menuItems.Length; i < len; i++) {
-            _notifyIcon.ContextMenu.MenuItems.Add(_menuItems[i]);
-         }
-
          _miConfigFile.Text = (_appctx.Cfg.GoodConfigExists ? "Reload " : "Create ") + Configuration.DefaultConfigFileName;
          _miConfigFile.Click -= HandleCreateConfigFileEvent;
          _miConfigFile.Click -= HandleLoadConfigFileEvent;
@@ -82,7 +83,7 @@ namespace WindowsRecentFilesFilterer {
       private void HandleLoadConfigFileEvent(Object sender, EventArgs ev) => SaveOrLoadConfigFile(true);
 
       private async void SaveOrLoadConfigFile(bool bLoad) {
-         MenuItem micf = _miConfigFile;
+         ToolStripMenuItem micf = _miConfigFile;
          micf.Click -= HandleCreateConfigFileEvent; micf.Click -= HandleLoadConfigFileEvent;
          try {
             if(bLoad) {
@@ -104,10 +105,49 @@ namespace WindowsRecentFilesFilterer {
          }
       }
 
+      private void ConfigureStartupLocation(bool? bEnable = null) {
+         string startupDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+         string shortcutPath = startupDirectory + "\\" + Application.ProductName + ".lnk";
+         IWshRuntimeLibrary.IWshShortcut shortcut = ((IWshRuntimeLibrary.IWshShortcut)_appctx.WindowsScriptShell.CreateShortcut(shortcutPath));
+
+         if(bEnable == null) {
+            if(File.Exists(shortcutPath)) {
+               if(shortcut.TargetPath.EqIgCase(Application.ExecutablePath)) {
+                  _miRunAtStartup.Checked = true;
+               } else {
+                  _miRunAtStartup.Checked = false;
+                  _miRunAtStartup.Text = "Run at Startup (ERROR! Startup does not point to this .exe) ";
+                  _miRunAtStartup.ToolTipText = "The startup entry does not point to this .exe. Click to fix.";
+               }
+            } else {
+               _miRunAtStartup.Text = "Run at Startup";
+               _miRunAtStartup.ToolTipText = "Click to add startup entry at: " + shortcutPath;
+               _miRunAtStartup.Checked = false;
+            }
+         } else if(bEnable == true) {
+            shortcut.TargetPath = Application.ExecutablePath;
+            shortcut.WorkingDirectory = Application.StartupPath;
+            shortcut.Description = "Launch " + Application.ProductName;
+            shortcut.IconLocation = Application.ExecutablePath;
+            shortcut.Save();
+            _miRunAtStartup.Text = "Run at Startup";
+            _miRunAtStartup.ToolTipText = "Startup Entry location: " + shortcutPath;
+            _miRunAtStartup.Checked = true;
+         } else if(bEnable == false) {
+            if(File.Exists(shortcutPath)) {
+               File.Delete(shortcutPath);
+            }
+            _miRunAtStartup.Text = "Run at Startup";
+            _miRunAtStartup.ToolTipText = "Click to add startup entry at: " + shortcutPath;
+            _miRunAtStartup.Checked = false;
+         }
+
+      }
 
 
 
-     #region IDisposable
+
+      #region IDisposable
       ~TrayIcon() {
          Dispose(false);
       }
@@ -121,7 +161,7 @@ namespace WindowsRecentFilesFilterer {
          // Therefore, you should call GC.SupressFinalize to take this object off the finalization queue and prevent finalization code for this object from executing a second time.
          GC.SuppressFinalize(this);
       }
-    
+
       // Dispose(bool disposing) executes in two distinct scenarios.
       // If disposing equals true, the method has been called directly or indirectly by a user's code. Managed and unmanaged resources can be disposed.
       // If disposing equals false, the method has been called by the runtime from inside the finalizer and you should not reference other objects. Only unmanaged resources can be disposed.

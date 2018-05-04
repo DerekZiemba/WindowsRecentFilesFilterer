@@ -28,8 +28,8 @@ namespace WindowsRecentFilesFilterer {
             _watchers[i].Dispose();
          }
          _watchers.Clear();
-         for(var i = 0; i < _ctx.Cfg.LocationNodes.Length; i++) {
-            _watchers.Add(new LocationWatcher(_ctx, _ctx.Cfg.LocationNodes[i]));
+         for(var i = 0; i < _ctx.Cfg.FilterLocations.Length; i++) {
+            _watchers.Add(new LocationWatcher(_ctx, _ctx.Cfg.FilterLocations[i]));
          }
          RunFiltersAsync();
 

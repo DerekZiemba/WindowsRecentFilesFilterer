@@ -22,7 +22,7 @@ namespace WindowsRecentFilesFilterer.Properties {
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "15.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    internal class Resources {
+    public class Resources {
         
         private static global::System.Resources.ResourceManager resourceMan;
         
@@ -36,7 +36,7 @@ namespace WindowsRecentFilesFilterer.Properties {
         ///   Returns the cached ResourceManager instance used by this class.
         /// </summary>
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        internal static global::System.Resources.ResourceManager ResourceManager {
+        public static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
                     global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("WindowsRecentFilesFilterer.Properties.Resources", typeof(Resources).Assembly);
@@ -51,7 +51,7 @@ namespace WindowsRecentFilesFilterer.Properties {
         ///   resource lookups using this strongly typed resource class.
         /// </summary>
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        internal static global::System.Globalization.CultureInfo Culture {
+        public static global::System.Globalization.CultureInfo Culture {
             get {
                 return resourceCulture;
             }
@@ -63,7 +63,7 @@ namespace WindowsRecentFilesFilterer.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
         /// </summary>
-        internal static System.Drawing.Icon AppIcon {
+        public static System.Drawing.Icon AppIcon {
             get {
                 object obj = ResourceManager.GetObject("AppIcon", resourceCulture);
                 return ((System.Drawing.Icon)(obj));
@@ -75,11 +75,16 @@ namespace WindowsRecentFilesFilterer.Properties {
         ///
         ///&lt;configuration&gt;
         ///
-        ///
-        ///&lt;/configuration&gt;
-        ///.
+        ///   &lt;!-- The locations will be filtered every interval in case FileSystemWatcher misses a file. --&gt;
+        ///   &lt;filterinterval seconds=&quot;600&quot; /&gt;
+        ///   
+        ///   &lt;locations&gt;
+        ///      &lt;!-- type: folder or registry. --&gt;
+        ///      &lt;!-- Watch specifically for new .lnk shortcut files being created. --&gt;
+        ///      &lt;location type=&quot;Folder&quot; path=&quot;%AppData%\Microsoft\Windows\Recent&quot; watch=&quot;*.lnk&quot;&gt;
+        ///         &lt;!-- This type of filter applies specifically to the Recents folder and not [rest of string was truncated]&quot;;.
         /// </summary>
-        internal static string defaultConfigXML {
+        public static string defaultConfigXML {
             get {
                 return ResourceManager.GetString("defaultConfigXML", resourceCulture);
             }

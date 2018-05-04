@@ -15,8 +15,8 @@ namespace WindowsRecentFilesFilterer {
 
       internal bool GoodConfigExists;
 		internal int FilterInterval;
-		internal LocationNode[] LocationNodes;
-		internal FilterNode[] FilterNodes;
+		internal LocationNode[] FilterLocations;
+		internal FilterNode[] FilterRules;
 
 
 		private Configuration() {
@@ -31,20 +31,15 @@ namespace WindowsRecentFilesFilterer {
          Int32.TryParse(root.SelectSingleNode("filterinterval")?.Attributes["seconds"]?.Value, out var interval);
          if(interval > 0) { FilterInterval = Math.Max(60, interval); }
 
-         XmlNodeList nodes = root.SelectNodes("filters/filter");
-			FilterNodes = new FilterNode[nodes.Count];
-			for(var i = 0; i < FilterNodes.Length; i++) {
-				FilterNodes[i] = new FilterNode(nodes[i]);
-         }
+			FilterRules = root.SelectNodes("filters/filter").Cast<XmlNode>().Select(x=> new FilterNode(x)).OrderBy(x=>x.nRank).ToArray();
 
-			nodes = root.SelectNodes("locations/location");
-			LocationNodes = new LocationNode[nodes.Count];
-			for(var i = 0; i < LocationNodes.Length; i++) {
-				LocationNodes[i] = new LocationNode(nodes[i]);
-            LocationNodes[i].AddApplicableFilters(FilterNodes);
-            LocationNodes[i].AddApplicableFilters(nodes[i].SelectNodes("filter").Cast<XmlNode>().Select(x => new FilterNode(x)));
+			XmlNodeList nodes = root.SelectNodes("locations/location");
+			FilterLocations = new LocationNode[nodes.Count];
+			for(var i = 0; i < FilterLocations.Length; i++) {
+				FilterLocations[i] = new LocationNode(nodes[i]);
+            FilterLocations[i].AddApplicableFilters(FilterRules);
+            FilterLocations[i].AddApplicableFilters(nodes[i].SelectNodes("filter").Cast<XmlNode>().Select(x => new FilterNode(x)));
 			}
-
 
 		}
 
@@ -94,12 +89,14 @@ namespace WindowsRecentFilesFilterer {
 
       internal class LocationNode {
          public LocationNodeType eType;
+         public int nRank;
 			public string sWatch;
 			public string sPath;
 			public string sFullPath;
          public List<FilterNode> lsFilters = new List<FilterNode>();
          public LocationNode(XmlNode node) {
-            Enum.TryParse(node.Attributes["type"]?.Value.Trim(), true, out eType);
+            Enum.TryParse(node.Attributes["type"].Value.Trim(), true, out eType);
+            if(!int.TryParse(node.Attributes["rank"]?.Value.Trim(), out nRank)) { nRank = int.MaxValue; }
             sWatch = node.Attributes["watch"]?.Value.Trim() ?? "*.*";
 				sPath = node.Attributes["path"].Value.Trim();
 				sFullPath = Path.GetFullPath(Environment.ExpandEnvironmentVariables(sPath));
@@ -115,11 +112,13 @@ namespace WindowsRecentFilesFilterer {
 
 		internal class FilterNode {
          public FilterNodeType eType;
+         public int nRank;
          public string sLocation;			
 			public string sInclude;
 			public string sExclude;
          public FilterNode(XmlNode node) {
             Enum.TryParse(node.Attributes["type"]?.Value.Trim(), true, out eType);
+            if(!int.TryParse(node.Attributes["rank"]?.Value.Trim(), out nRank)) { nRank = int.MaxValue; }
             sLocation = node.Attributes["location"]?.Value.Trim() ?? "*";
 				sInclude = node.Attributes["include"]?.Value.Trim() ?? "";
 				sExclude = node.Attributes["exclude"]?.Value.Trim() ?? "";
