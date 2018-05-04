@@ -61,13 +61,13 @@ namespace WindowsRecentFilesFilterer {
 
       private bool MatchesFilter(string fullpath) {
          string targetPath = null;
-         if(fullpath.EndsWith(".lnk")) {
-            targetPath = ((IWshRuntimeLibrary.IWshShortcut)_ctx.WindowsScriptShell.CreateShortcut(fullpath)).TargetPath;
-         }
 
          for(var i=0; i< Location.lsFilters.Count; i++) {
             var filter = Location.lsFilters[i];
-            if(filter.bToTargetPath) {
+            if(filter.eType == Configuration.FilterNodeType.Shortcut) {
+               if(targetPath == null) {
+                  targetPath = fullpath.EndsWith(".lnk") ? ((IWshRuntimeLibrary.IWshShortcut)_ctx.WindowsScriptShell.CreateShortcut(fullpath)).TargetPath : "";
+               }
                if(!String.IsNullOrEmpty(targetPath) && targetPath.Like(filter.sInclude) && !targetPath.Like(filter.sExclude)) {
                   return true;
                }

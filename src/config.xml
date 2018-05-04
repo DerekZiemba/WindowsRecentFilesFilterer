@@ -4,19 +4,25 @@
 
    <!-- The locations will be filtered every interval in case FileSystemWatcher misses a file. -->
    <filterinterval seconds="600" />
+   
+   <startup>
+      <location type="Folder" path="%AppData%\Microsoft\Start Menu\Programs\StartUp" />    
+      <!--<location type="Registry" path="HKCU\Software\Microsoft\Windows\CurrentVersion\Run" />-->
+   </startup>
 
    <locations>
+      <!-- type: folder or registry. -->
       <!-- Watch specifically for new .lnk shortcut files being created. -->
-      <location path="%AppData%\Microsoft\Windows\Recent" watch="*.lnk">
+      <location type="Folder" path="%AppData%\Microsoft\Windows\Recent" watch="*.lnk">
          <!-- This type of filter applies specifically to the Recents folder and not any other locations. -->
          <!-- 
-            totargetpath: applies the rule to the target path of the shortcut instead of the shortcut name itself. 
+            type="Shortcut" - makes the rule apply to the target of the shortcut instead of the name of the shortcut. 
             include: if the shortcuts TargetPath matches the rule, it will be deleted. 
             exclude: is applied after include. Here it's empty because we want to include all* files and exclude none that match the target. 
           -->
-         <filter totargetpath="true" include="*search-ms:displayname*" exclude="" />
-         <filter totargetpath="true" include="X:\*" exclude="" />
-         <filter totargetpath="true" include="*.torrent" exclude="" />
+         <filter type="Shortcut" include="*search-ms:displayname*" exclude="" />
+         <filter type="Shortcut" include="X:\*" exclude="" />
+         <filter type="Shortcut" include="*.torrent" exclude="" />
       </location>
 <!--todo: C:\Users\Derek\AppData\Roaming\Microsoft\Windows\Recent\AutomaticDestinations-->
       <!--todo: C:\Users\Derek\AppData\Roaming\Microsoft\Windows\Recent\CustomDestinations-->
@@ -28,12 +34,10 @@
    <filters>
       <!--
          location: selects which location paths the rule applies to. 
-         target: for .lnk files.
       -->
       <!--This rule applies to all locations.  All torrent files in the locations will be removed. -->
-      <filter location="*" include="*.torrent*" exclude="" />
-      <filter location="*" include="{*-*-*-*-*}" />
-      
+      <filter type="FileName" location="*" include="*.torrent*" exclude="" />
+      <filter type="FileName" location="*" include="{*-*-*-*-*}" />  
 
    </filters>
 

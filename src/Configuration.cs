@@ -83,13 +83,23 @@ namespace WindowsRecentFilesFilterer {
 			}
 		}
 
+      internal enum LocationNodeType {
+         Folder,
+         Registry
+      }
+      internal enum FilterNodeType {
+         FileName,
+         Shortcut        
+      }
 
-		internal class LocationNode {
+      internal class LocationNode {
+         public LocationNodeType eType;
 			public string sWatch;
 			public string sPath;
 			public string sFullPath;
          public List<FilterNode> lsFilters = new List<FilterNode>();
          public LocationNode(XmlNode node) {
+            Enum.TryParse(node.Attributes["type"]?.Value.Trim(), true, out eType);
             sWatch = node.Attributes["watch"]?.Value.Trim() ?? "*.*";
 				sPath = node.Attributes["path"].Value.Trim();
 				sFullPath = Path.GetFullPath(Environment.ExpandEnvironmentVariables(sPath));
@@ -104,12 +114,12 @@ namespace WindowsRecentFilesFilterer {
       }
 
 		internal class FilterNode {
-         public bool bToTargetPath;
+         public FilterNodeType eType;
          public string sLocation;			
 			public string sInclude;
 			public string sExclude;
          public FilterNode(XmlNode node) {
-            bool.TryParse(node.Attributes["totargetpath"]?.Value.Trim(), out bToTargetPath);
+            Enum.TryParse(node.Attributes["type"]?.Value.Trim(), true, out eType);
             sLocation = node.Attributes["location"]?.Value.Trim() ?? "*";
 				sInclude = node.Attributes["include"]?.Value.Trim() ?? "";
 				sExclude = node.Attributes["exclude"]?.Value.Trim() ?? "";

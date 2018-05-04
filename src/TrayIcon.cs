@@ -21,6 +21,7 @@ namespace WindowsRecentFilesFilterer {
       private MenuItem _miLastRunTime;
       private MenuItem _miRunFilters;
       private MenuItem _miConfigFile;
+      private MenuItem _miRunAtStartup;
       private MenuItem _miExit;
 
       internal event Action LoadedConfig;
@@ -44,6 +45,9 @@ namespace WindowsRecentFilesFilterer {
          _miRunFilters.Click +=  (sender, e) => { _appctx.LocationWatcherMan.RunFiltersAsync(); };
 
          _miConfigFile = new MenuItem(Configuration.DefaultConfigFileName);
+
+         _miRunAtStartup = new MenuItem("Run at Startup");
+
 
          _miExit = new MenuItem("Exit");
          _miExit.Click += (sender, e) => { _notifyIcon.Visible = false; Application.Exit(); };
