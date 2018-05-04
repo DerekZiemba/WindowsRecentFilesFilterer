@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+
+<configuration>
+
+   <!-- The locations will be filtered every interval in case FileSystemWatcher misses a file. -->
+   <filterinterval seconds="300" />
+
+   <locations>
+      <!-- Watch specifically for new .lnk shortcut files being created. -->
+      <location path="%AppData%\Microsoft\Windows\Recent" watch="*.lnk">
+         <!-- This type of filter applies specifically to the Recents folder and not any other locations. -->
+         <!-- 
+            totargetpath: applies the rule to the target path of the shortcut instead of the shortcut name itself. 
+            include: if the shortcuts TargetPath matches the rule, it will be deleted. 
+            exclude: is applied after include. Here it's empty because we want to include all* files and exclude none that match the target. 
+          -->
+         <filter totargetpath="true" include="*search-ms:displayname*" exclude="" />
+         <filter totargetpath="true" include="X:\*" exclude="" />
+         <filter totargetpath="true" include="*.torrent" exclude="" />
+      </location>
+
+   </locations>
+
+   <filters>
+      <!--
+         location: selects which location paths the rule applies to. 
+         target: for .lnk files.
+      -->
+      <!--This rule applies to all locations.  All torrent files in the locations will be removed. -->
+      <filter location="*" include="*.torrent*" exclude="" />
+      <filter location="*" include="{*-*-*-*-*}" />
+      
+
+   </filters>
+
+</configuration>

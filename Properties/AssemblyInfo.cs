@@ -10,7 +10,7 @@ using System.Windows;
 [assembly: AssemblyTitle("WindowsRecentFilesFilterer")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("Derek Ziemba")]
 [assembly: AssemblyProduct("WindowsRecentFilesFilterer")]
 [assembly: AssemblyCopyright("Copyright ©  2018")]
 [assembly: AssemblyTrademark("")]
