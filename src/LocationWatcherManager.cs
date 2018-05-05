@@ -18,12 +18,12 @@ namespace WindowsRecentFilesFilterer {
 
       public LocationWatcherManager(AppContext ctx) {
          _ctx = ctx;
-         ctx.ConfigChangeAlert += Initialize;
-         ctx.TimerTick += ()=> RunFiltersAsync();
+         ctx.ConfigChangeAlert += HandleConfigChange;
+         ctx.FilterIntervalTick += HandleFilterIntervalEvent;
       }
 
 
-      public void Initialize() {
+      private void HandleConfigChange(object sender, EventArgs args) {
          for(var i = 0; i < _watchers.Count; i++) {
             _watchers[i].Dispose();
          }
@@ -32,9 +32,9 @@ namespace WindowsRecentFilesFilterer {
             _watchers.Add(new LocationWatcher(_ctx, _ctx.Cfg.FilterLocations[i]));
          }
          RunFiltersAsync();
-
       }
 
+      private void HandleFilterIntervalEvent(object sender, EventArgs args)=> RunFiltersAsync();
 
       public async Task RunFiltersAsync() {
          await Task.Run((Action)RunFilters);
@@ -73,7 +73,8 @@ namespace WindowsRecentFilesFilterer {
       protected virtual void Dispose(bool disposing) { // If disposing equals true, dispose all managed and unmanaged resources.
          if(_disposed) { return; } //Guard against repeat disposals
          if(disposing) { // Dispose managed resources.  
-            _ctx.ConfigChangeAlert -= Initialize;
+            _ctx.ConfigChangeAlert -= HandleConfigChange;
+            _ctx.FilterIntervalTick -= HandleFilterIntervalEvent;
             for(var i=0; i<_watchers.Count; i++) {
                _watchers[i].Dispose();
             }

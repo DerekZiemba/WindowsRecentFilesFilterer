@@ -15,20 +15,21 @@ namespace WindowsRecentFilesFilterer {
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
    internal class TrayIcon : IDisposable {
-      private AppContext _appctx;
+      private AppContext ctx;
       private NotifyIcon _notifyIcon;
       private IContainer _components;
 
       private ToolStripMenuItem _miLastRunTime;
       private ToolStripMenuItem _miRunFilters;
+      private ToolStripMenuItem _miCreateNewConfigFile;
       private ToolStripMenuItem _miConfigFile;
       private ToolStripMenuItem _miRunAtStartup;
       private ToolStripMenuItem _miExit;
 
-      internal event Action LoadedConfig;
+      internal event EventHandler ConfigChange;
 
       public TrayIcon(AppContext context) {
-         _appctx = context;
+         ctx = context;
          _components = new System.ComponentModel.Container();
          _notifyIcon = new NotifyIcon(this._components) {
             ContextMenuStrip = new ContextMenuStrip(),
@@ -37,78 +38,79 @@ namespace WindowsRecentFilesFilterer {
             Visible = true
          };
 
-         _miLastRunTime = new ToolStripMenuItem("Last Run: ") { Enabled = false };
-         _appctx.LocationWatcherMan.FilterRunComplete += (sender, args) => {
-            _miLastRunTime.Text = "Last Run: " + DateTime.Now.ToLongTimeString() + ". Runtime: " + args.RuntimeMilliseconds + "ms";
-         };
 
-         _miRunFilters = new ToolStripMenuItem("Run Filters");
-         _miRunFilters.Click += (sender, e) => { _appctx.LocationWatcherMan.RunFiltersAsync(); };
+         _miRunFilters = new ToolStripMenuItem("Run Filters Now");
+         _miRunFilters.Click += (sender, e) => { ctx.LocationWatcherMan.RunFiltersAsync(); };
+         _notifyIcon.ContextMenuStrip.Items.Add(_miRunFilters);
+
+         _miLastRunTime = new ToolStripMenuItem("Last Run: ") { Enabled = false };
+         ctx.LocationWatcherMan.FilterRunComplete += (sender, args) => {
+            var str = "Last Run: " + DateTime.Now.ToLongTimeString() + ". Runtime: " + args.RuntimeMilliseconds + "ms";
+            _miLastRunTime.Text = str;
+         };
+         _notifyIcon.ContextMenuStrip.Items.Add(_miLastRunTime);
+
+
+         _notifyIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator());
+
 
          _miConfigFile = new ToolStripMenuItem(Configuration.DefaultConfigFileName);
+         _miConfigFile.ToolTipText = "The config file allows you to specify which folders and files to filter. It's located in this .exe's directory.";
+         _notifyIcon.ContextMenuStrip.Items.Add(_miConfigFile);
+
+         _miCreateNewConfigFile = new ToolStripMenuItem("Create New " + Configuration.DefaultConfigFileName);
+         _miCreateNewConfigFile.ToolTipText = "The current config could not be loaded. Click here to generate a new one using default configuration.";
+         _miCreateNewConfigFile.Click += HandleCreateConfigFileEvent;
+         _miCreateNewConfigFile.Visible = false;
+         _notifyIcon.ContextMenuStrip.Items.Add(_miCreateNewConfigFile);
+
 
          _miRunAtStartup = new ToolStripMenuItem("Run at Startup");
          _miRunAtStartup.Click += (sender, e) => { ConfigureStartupLocation(!_miRunAtStartup.Checked); };
+         _notifyIcon.ContextMenuStrip.Items.Add(_miRunAtStartup);
+
+
+         _notifyIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator());
+
 
          _miExit = new ToolStripMenuItem("Exit");
          _miExit.Click += (sender, e) => { _notifyIcon.Visible = false; Application.Exit(); };
-;
-         _notifyIcon.ContextMenuStrip.Items.AddRange(new ToolStripItem[] { _miRunFilters, _miLastRunTime, new ToolStripSeparator(), _miConfigFile, _miRunAtStartup, new ToolStripSeparator(), _miExit });
+         _notifyIcon.ContextMenuStrip.Items.Add(_miExit);
 
-         _notifyIcon.ContextMenuStrip.Opening += (object sender, System.ComponentModel.CancelEventArgs e) => {
-            e.Cancel = false;
+         ctx.ConfigChangeAlert += (sender, args) => {
+            _miConfigFile.Text = (ctx.Cfg.ConfigFileExists ? "Reload " : "Create ") + Configuration.DefaultConfigFileName;
+            _miConfigFile.Click -= HandleCreateConfigFileEvent;
+            _miConfigFile.Click -= HandleLoadConfigFileEvent;
+            if(ctx.Cfg.ConfigFileExists) {
+               _miConfigFile.Click += HandleLoadConfigFileEvent;
+            } else {
+               _miConfigFile.Click += HandleCreateConfigFileEvent;
+            }
+
+            _miCreateNewConfigFile.Visible = ctx.Cfg.LoadConfigFailed;
          };
 
          ConfigureStartupLocation();
-         RebuildMenuItems();
-
-         context.ConfigChangeAlert += RebuildMenuItems;
-
 
       }
 
-
-      public void RebuildMenuItems() {
-         _miConfigFile.Text = (_appctx.Cfg.GoodConfigExists ? "Reload " : "Create ") + Configuration.DefaultConfigFileName;
-         _miConfigFile.Click -= HandleCreateConfigFileEvent;
-         _miConfigFile.Click -= HandleLoadConfigFileEvent;
-         if(_appctx.Cfg.GoodConfigExists) {
-            _miConfigFile.Click += HandleLoadConfigFileEvent;
-         } else {
-            _miConfigFile.Click += HandleCreateConfigFileEvent;
-         }
-      }
 
       private void HandleCreateConfigFileEvent(Object sender, EventArgs ev) => SaveOrLoadConfigFile(false);
       private void HandleLoadConfigFileEvent(Object sender, EventArgs ev) => SaveOrLoadConfigFile(true);
 
       private async void SaveOrLoadConfigFile(bool bLoad) {
-         ToolStripMenuItem micf = _miConfigFile;
-         micf.Click -= HandleCreateConfigFileEvent; micf.Click -= HandleLoadConfigFileEvent;
-         try {
-            if(bLoad) {
-               _appctx.Cfg = await Configuration.GetConfiguration();
-               this.LoadedConfig();
-            } else {
-               await _appctx.Cfg.SaveCurrentConfig();
-            }
-            micf.Text = "Reload " + Configuration.DefaultConfigFileName;
-            micf.Click -= HandleCreateConfigFileEvent; micf.Click -= HandleLoadConfigFileEvent;
-            micf.Click += HandleLoadConfigFileEvent;
+         if(!bLoad) {
+            await ctx.Cfg.SaveCurrentConfig();
 
-         } catch(Exception ex) {
-            micf.Text = "Create New " + Configuration.DefaultConfigFileName;
-            micf.Click -= HandleCreateConfigFileEvent; micf.Click -= HandleLoadConfigFileEvent;
-            micf.Click += HandleCreateConfigFileEvent;
-            string msg = "Failed to " + (bLoad ? "load " : "save ") + Configuration.DefaultConfigFileName + "\n\n" + ex.ToString();
-            MessageBox.Show(msg, Program.ProcessName, MessageBoxButtons.OK, MessageBoxIcon.Error);
          }
+         ctx.Cfg = await Configuration.GetConfiguration();
+         this.ConfigChange(this, null);
       }
 
       private void ConfigureStartupLocation(bool? bEnable = null) {
          string startupDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
          string shortcutPath = startupDirectory + "\\" + Application.ProductName + ".lnk";
-         IWshRuntimeLibrary.IWshShortcut shortcut = ((IWshRuntimeLibrary.IWshShortcut)_appctx.WindowsScriptShell.CreateShortcut(shortcutPath));
+         IWshRuntimeLibrary.IWshShortcut shortcut = ((IWshRuntimeLibrary.IWshShortcut)ctx.WindowsScriptShell.CreateShortcut(shortcutPath));
 
          if(bEnable == null) {
             if(File.Exists(shortcutPath)) {
@@ -171,7 +173,7 @@ namespace WindowsRecentFilesFilterer {
          if(disposing) { // Dispose managed resources.  
             _components.Dispose();
             _notifyIcon.Dispose();
-            foreach(Delegate ev in LoadedConfig.GetInvocationList()) { LoadedConfig -= (Action)ev; }
+            foreach(Delegate ev in ConfigChange.GetInvocationList()) { ConfigChange -= (EventHandler)ev; }
          }
          // Call the appropriate methods to clean up unmanaged resources here. If disposing is false, only the following code is executed. 
          Interop.DestroyIcon(iconhandle);

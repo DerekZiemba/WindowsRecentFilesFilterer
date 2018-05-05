@@ -8,11 +8,18 @@ using System.Windows.Threading;
 using ZMBA;
 
 namespace WindowsRecentFilesFilterer {
+   #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+
    public class AppContext : System.Windows.Forms.ApplicationContext, IDisposable  {
       private Task _taskLoadCfg;
       private Configuration _cfg;
       private DispatcherTimer _timer;
+      private event EventHandler _configChangeAlert;
 
+      internal event EventHandler ConfigChangeAlert { add=>_configChangeAlert+=value; remove=>_configChangeAlert-=value; }
+      internal event EventHandler FilterIntervalTick  { add=>_timer.Tick+=value; remove=>_timer.Tick-=value; }
+
+      internal Dispatcher UIDispatcher { get; set; }
       internal Configuration Cfg { get => Common.BlockUntilFinished(ref _taskLoadCfg, ref _cfg); set => _cfg = value; }
 
       internal TrayIcon TrayIcon { get; }
@@ -22,25 +29,25 @@ namespace WindowsRecentFilesFilterer {
       internal LocationWatcherManager LocationWatcherMan { get; }
 
 
-      internal event Action ConfigChangeAlert;
-      internal event Action TimerTick;
-
-
       public AppContext() {
-         _taskLoadCfg = Task.Run(async () => this._cfg = await Configuration.TryGetConfiguration());
+         UIDispatcher = Dispatcher.CurrentDispatcher;
+
+         _taskLoadCfg = Task.Run(async () => {
+            this._cfg = await Configuration.GetConfiguration();
+            UIDispatcher.BeginInvoke(this._configChangeAlert, new[] { this, null });
+         });
+
+         _timer = new DispatcherTimer();
          LocationWatcherMan = new LocationWatcherManager(this);
 
          TrayIcon = new TrayIcon(this);
-         TrayIcon.LoadedConfig += () => this.ConfigChangeAlert();
+         TrayIcon.ConfigChange += (sender, args) => this._configChangeAlert(sender, args);
 
-         _timer = new DispatcherTimer();
-         _timer.Tick += (object sender, EventArgs e) => this.TimerTick();
          _timer.Interval = TimeSpan.FromSeconds(_cfg.FilterInterval);
+         this.ConfigChangeAlert += (sender, args) => { _timer.Interval = TimeSpan.FromSeconds(_cfg.FilterInterval); };
+
          _timer.Start();
-
-         this.ConfigChangeAlert += () => { _timer.Interval = TimeSpan.FromSeconds(_cfg.FilterInterval); };
-
-         LocationWatcherMan.Initialize();
+         this._configChangeAlert(this, null);
       }
 
 
@@ -59,8 +66,7 @@ namespace WindowsRecentFilesFilterer {
          if(disposing) { // Dispose managed resources.  
             _timer.Stop();
             TrayIcon.Dispose();   
-            foreach(Delegate ev in ConfigChangeAlert.GetInvocationList()) { ConfigChangeAlert -= (Action)ev; }
-            foreach(Delegate ev in TimerTick.GetInvocationList()) { TimerTick -= (Action)ev; }
+            foreach(Delegate ev in _configChangeAlert.GetInvocationList()) { _configChangeAlert -= (EventHandler)ev; }
          }
          base.Dispose(disposing);
          // Call the appropriate methods to clean up unmanaged resources here. If disposing is false, only the following code is executed.      

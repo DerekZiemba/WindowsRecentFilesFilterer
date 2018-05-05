@@ -5,6 +5,7 @@ using System.Text;
 using System.Xml;
 using System.IO;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using ZMBA;
 
 namespace WindowsRecentFilesFilterer {
@@ -13,15 +14,17 @@ namespace WindowsRecentFilesFilterer {
 	internal class Configuration {
 		internal const string DefaultConfigFileName = "WindowsRecentFilesFilterer.config";
 
-      internal bool GoodConfigExists;
-		internal int FilterInterval;
-		internal LocationNode[] FilterLocations;
-		internal FilterNode[] FilterRules;
+      internal bool IsDefaultConfig { get; private set; }
+      internal bool ConfigFileExists { get; private set; }
+      internal bool LoadConfigFailed { get; private set; }
+      
+ 
+		internal int FilterInterval { get; private set; }
+		internal LocationNode[] FilterLocations { get; private set; }
+		internal FilterNode[] FilterRules { get; private set; }
 
 
-		private Configuration() {
-			LoadConfigXML(Properties.Resources.defaultConfigXML);
-		}
+		private Configuration() { }
 
 		private void LoadConfigXML(string sxml) {
 			XmlDocument doc = new XmlDocument();
@@ -40,29 +43,34 @@ namespace WindowsRecentFilesFilterer {
             FilterLocations[i].AddApplicableFilters(FilterRules);
             FilterLocations[i].AddApplicableFilters(nodes[i].SelectNodes("filter").Cast<XmlNode>().Select(x => new FilterNode(x)));
 			}
-
 		}
 
 
-
-		internal static async Task<Configuration> TryGetConfiguration() {
+      internal static async Task<Configuration> GetConfiguration() {
          Configuration cfg = new Configuration();
-			if(File.Exists(DefaultConfigFileName)) {
-            cfg.LoadConfigXML(await ReadConfigFile(DefaultConfigFileName));
-            cfg.GoodConfigExists = true;
+         cfg.LoadConfigXML(Properties.Resources.defaultConfigXML);
+         cfg.IsDefaultConfig = true;         
+         cfg.ConfigFileExists = File.Exists(DefaultConfigFileName);
+
+			if(cfg.ConfigFileExists) {
+            try {
+               cfg.LoadConfigXML(await ReadConfigFile(DefaultConfigFileName));
+               cfg.IsDefaultConfig = false;
+            } catch(Exception ex) {
+               cfg.LoadConfigFailed = true;
+               cfg.LoadConfigXML(Properties.Resources.defaultConfigXML);
+               MessageBox.Show("Failed to load custom configuration. \n\n" + ex.ToString(), Program.ProcessName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }            
 			}
          return cfg;
       }
 
-      internal static async Task<Configuration> GetConfiguration() {
-         Configuration cfg = new Configuration();
-         cfg.LoadConfigXML(await ReadConfigFile(DefaultConfigFileName));
-         cfg.GoodConfigExists = true;
-         return cfg;
-      }
-
       public async Task SaveCurrentConfig() {
-         await SaveConfigFile(DefaultConfigFileName, Properties.Resources.defaultConfigXML);
+         try {
+            await SaveConfigFile(DefaultConfigFileName, Properties.Resources.defaultConfigXML);
+         } catch(Exception ex) {
+            MessageBox.Show("Failed to save configuration. \n\n" + ex.ToString(), Program.ProcessName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+         }        
       }
 
       private static async Task<bool> SaveConfigFile(string sFilePath, string sxml) {
