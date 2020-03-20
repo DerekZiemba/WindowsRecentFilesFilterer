@@ -194,6 +194,7 @@ namespace ZMBA {
 
       [MethodImpl(AggressiveInlining)] public static bool EqAlphaNumIgCase(this string str, string other) => 0 == InvCmpInfo.Compare(str, other, VbCmp | CmpOp.IgnoreSymbols | CmpOp.IgnoreCase);
 
+		[MethodImpl(AggressiveInlining)] public static string ToStringClear(this StringBuilder sb) { string str = sb.ToString(); sb.Clear(); return str; }
 
       public static bool Like(this string input, string pattern) {
          return Microsoft.VisualBasic.CompilerServices.LikeOperator.LikeString(input, pattern, Microsoft.VisualBasic.CompareMethod.Text);
@@ -220,7 +221,16 @@ namespace ZMBA {
          return StringBuilderCache.Release(ref sb);
       }
 
-      public static string ReplaceIgCase(this string sInput, string oldValue, string newValue) {
+		public static string Repeat(this string str, int count) {
+			if(!string.IsNullOrEmpty(str)) {
+				var sb = StringBuilderCache.Take(str.Length * count);
+				for(int i = 0; i < count; i++) { sb.Append(str); }
+				return StringBuilderCache.Release(ref sb);
+			}
+			return string.Empty;
+		}
+
+		public static string ReplaceIgCase(this string sInput, string oldValue, string newValue) {
          if (!string.IsNullOrEmpty(sInput) && !string.IsNullOrEmpty(oldValue)) {
             int idxLeft = sInput.IndexOf(oldValue, 0, StringComparison.OrdinalIgnoreCase);
             //Don't build a new string if it doesn't even contain the value
@@ -284,19 +294,26 @@ namespace ZMBA {
       }
 
 
-      public static string ToStringJoin(this IEnumerable<string> ienum, string separator = ", ") {
+      public static string ToStringJoin(this IEnumerable<string> ienum, string separator = ", ", bool bFilterWhitespace = true) {
          if(ienum == null) { return ""; }
          if(separator == null) { separator = ""; }
          var ls = StringListCache.Take();
          var size = 0;
          foreach(string item in ienum) {
-            if (!string.IsNullOrWhiteSpace(item)) {
-               var str = item.Trim();
-               size += str.Length + separator.Length;
-               ls.Add(str);
-            }
-         }
-         var sb = StringBuilderCache.Take(size);
+				if(bFilterWhitespace) {
+					if(!string.IsNullOrWhiteSpace(item)) {
+						var str = item.Trim();
+						size += str.Length + separator.Length;
+						ls.Add(str);
+					}
+				} else {
+					if(item != null) {
+						size += item.Length + separator.Length;
+						ls.Add(item);
+					}
+				}
+			}
+			var sb = StringBuilderCache.Take(size);
          for(var i = 0; i < ls.Count; i++) {
             sb.Append(ls[i]);
             if (i < ls.Count - 1) { sb.Append(separator); }
@@ -534,7 +551,7 @@ namespace ZMBA {
 
       private static StringBuilder[] _cached = new StringBuilder[CACHE_SIZE];
 
-      public static StringBuilder Take(int capacity = 32) {
+      public static StringBuilder Take(int capacity = 40) {
          if(capacity > MAX_ITEM_CAPACITY) { return new StringBuilder(capacity); }
          if(capacity < MIN_ITEM_CAPACITY) { capacity = MIN_ITEM_CAPACITY; }
          StringBuilder value = null;

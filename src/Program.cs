@@ -11,7 +11,8 @@ namespace WindowsRecentFilesFilterer {
 
    static class Program {
 
-      public static string ProcessName;
+      public static AppContext Ctx { get; private set; }
+      public static string ProcessName { get; private set; }
 
       [STAThread]
       static void Main() {
@@ -32,8 +33,9 @@ namespace WindowsRecentFilesFilterer {
          Application.EnableVisualStyles();
          Application.SetCompatibleTextRenderingDefault(false);
          try {
-            var ctx = new AppContext();
-            Application.Run(ctx);
+            Ctx = new AppContext();
+				Ctx.Init();
+            Application.Run(Ctx);
          } catch(Exception ex) {
             MessageBox.Show(ex.ToString(), ex.Message);
          }

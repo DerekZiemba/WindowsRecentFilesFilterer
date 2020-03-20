@@ -78,13 +78,10 @@
     <Compile Include="src\Configuration.cs" />
     <Compile Include="src\Interop.cs" />
     <Compile Include="src\LocationWatcherManager.cs" />
-    <Compile Include="src\LocationWatcher.cs" />
     <Compile Include="src\Program.cs" />
     <Compile Include="src\AppContext.cs" />
     <Compile Include="src\TrayIcon.cs" />
-    <Compile Include="src\Utility.cs" />
     <Compile Include="src\ZMBA.Common.cs" />
-    <Compile Include="src\ZMBA.RuntimeCompiler.cs" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs">

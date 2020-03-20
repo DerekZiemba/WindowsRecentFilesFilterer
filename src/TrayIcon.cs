@@ -15,7 +15,6 @@ namespace WindowsRecentFilesFilterer {
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
    internal class TrayIcon : IDisposable {
-      private AppContext ctx;
       private NotifyIcon _notifyIcon;
       private IContainer _components;
 
@@ -28,8 +27,7 @@ namespace WindowsRecentFilesFilterer {
 
       internal event EventHandler ConfigChange;
 
-      public TrayIcon(AppContext context) {
-         ctx = context;
+      public TrayIcon() {
          _components = new System.ComponentModel.Container();
          _notifyIcon = new NotifyIcon(this._components) {
             ContextMenuStrip = new ContextMenuStrip(),
@@ -40,11 +38,11 @@ namespace WindowsRecentFilesFilterer {
 
 
          _miRunFilters = new ToolStripMenuItem("Run Filters Now");
-         _miRunFilters.Click += (sender, e) => { ctx.LocationWatcherMan.RunFiltersAsync(); };
+         _miRunFilters.Click += (sender, e) => { Program.Ctx.LocationWatcherMan.RunFiltersAsync(); };
          _notifyIcon.ContextMenuStrip.Items.Add(_miRunFilters);
 
          _miLastRunTime = new ToolStripMenuItem("Last Run: ") { Enabled = false };
-         ctx.LocationWatcherMan.FilterRunComplete += (sender, args) => {
+         Program.Ctx.LocationWatcherMan.FilterRunComplete += (sender, args) => {
             var str = "Last Run: " + DateTime.Now.ToLongTimeString() + ". Runtime: " + args.RuntimeMilliseconds + "ms";
             _miLastRunTime.Text = str;
          };
@@ -77,17 +75,17 @@ namespace WindowsRecentFilesFilterer {
          _miExit.Click += (sender, e) => { _notifyIcon.Visible = false; Application.Exit(); };
          _notifyIcon.ContextMenuStrip.Items.Add(_miExit);
 
-         ctx.ConfigChangeAlert += (sender, args) => {
-            _miConfigFile.Text = (ctx.Cfg.ConfigFileExists ? "Reload " : "Create ") + Configuration.DefaultConfigFileName;
+         Program.Ctx.ConfigChangeAlert += (sender, args) => {
+            _miConfigFile.Text = (Program.Ctx.Cfg.ConfigFileExists ? "Reload " : "Create ") + Configuration.DefaultConfigFileName;
             _miConfigFile.Click -= HandleCreateConfigFileEvent;
             _miConfigFile.Click -= HandleLoadConfigFileEvent;
-            if(ctx.Cfg.ConfigFileExists) {
+            if(Program.Ctx.Cfg.ConfigFileExists) {
                _miConfigFile.Click += HandleLoadConfigFileEvent;
             } else {
                _miConfigFile.Click += HandleCreateConfigFileEvent;
             }
 
-            _miCreateNewConfigFile.Visible = ctx.Cfg.LoadConfigFailed;
+            _miCreateNewConfigFile.Visible = Program.Ctx.Cfg.LoadConfigFailed;
          };
 
          ConfigureStartupLocation();
@@ -100,17 +98,17 @@ namespace WindowsRecentFilesFilterer {
 
       private async void SaveOrLoadConfigFile(bool bLoad) {
          if(!bLoad) {
-            await ctx.Cfg.SaveCurrentConfig();
+            await Program.Ctx.Cfg.SaveCurrentConfig();
 
          }
-         ctx.Cfg = await Configuration.GetConfiguration();
+         Program.Ctx.Cfg = await Configuration.GetConfiguration();
          this.ConfigChange(this, null);
       }
 
       private void ConfigureStartupLocation(bool? bEnable = null) {
          string startupDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
          string shortcutPath = startupDirectory + "\\" + Application.ProductName + ".lnk";
-         IWshRuntimeLibrary.IWshShortcut shortcut = ((IWshRuntimeLibrary.IWshShortcut)ctx.WindowsScriptShell.CreateShortcut(shortcutPath));
+         IWshRuntimeLibrary.IWshShortcut shortcut = ((IWshRuntimeLibrary.IWshShortcut)Program.Ctx.WindowsScriptShell.CreateShortcut(shortcutPath));
 
          if(bEnable == null) {
             if(File.Exists(shortcutPath)) {
