@@ -78,7 +78,6 @@
     <Compile Include="src\Configuration.cs" />
     <Compile Include="src\Interop.cs" />
     <Compile Include="src\LocationWatcherManager.cs" />
-    <Compile Include="src\LocationWatcher.cs" />
     <Compile Include="src\Program.cs" />
     <Compile Include="src\AppContext.cs" />
     <Compile Include="src\TrayIcon.cs" />
